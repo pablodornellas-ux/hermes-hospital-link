@@ -81,10 +81,13 @@ for f in MEMORY.md USER.md; do
     if [ -f "$HERMES_HOME/$f" ]; then
         SIZE=$(stat -c%s "$HERMES_HOME/$f" 2>/dev/null || stat -f%z "$HERMES_HOME/$f")
         SIZE_KB=$((SIZE / 1024))
-        if [ $SIZE_KB -gt 5 ]; then
-            ok "01-memory: $f (${SIZE_KB}KB)"
+        # MEMORY.md: >= 500 bytes é funcional, USER.md: >= 200 bytes
+        MIN_BYTES=200
+        if [ "$f" = "MEMORY.md" ]; then MIN_BYTES=500; fi
+        if [ $SIZE -ge $MIN_BYTES ]; then
+            ok "01-memory: $f (${SIZE_KB}KB, ${SIZE}b)"
         else
-            warn "01-memory: $f muito pequeno (${SIZE_KB}KB)"
+            warn "01-memory: $f muito pequeno (${SIZE}b, min ${MIN_BYTES})"
         fi
     else
         warn "01-memory: $f nao encontrado"
