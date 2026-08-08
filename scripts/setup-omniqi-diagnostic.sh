@@ -306,6 +306,111 @@ if [ -f "$WORKSPACE/scripts/hospital-harmonize.sh" ]; then
 fi
 log ""
 
+# 12. RELATORIO DE SAUDE (read-only, nao bloqueia se algo falhar)
+log "[12/12] Relatorio de saude (read-only)..."
+
+echo
+echo "  ============================================"
+echo "   RELATORIO DE SAUDE - OMNIQI"
+echo "  ============================================"
+echo
+
+# L1: Identity files
+echo "  [L1] Identity files:"
+for f in MEMORY.md USER.md SOUL.md AGENTS.md; do
+    if [ -f "$HERMES_HOME/$f" ]; then
+        size=$(stat -c%s "$HERMES_HOME/$f" 2>/dev/null || stat -f%z "$HERMES_HOME/$f")
+        echo "    OK $f: ${size}B"
+    else
+        echo "    -- $f (nao existe — OmniQI nao tem, NAO criar)"
+    fi
+done
+
+# L2: mem0 (checar local, nao assumir)
+echo
+echo "  [L2] Mem0:"
+if curl -s -m 3 "$MEM0_URL/health" >/dev/null 2>&1; then
+    echo "    OK mem0-server rodando em $MEM0_URL"
+else
+    echo "    -- mem0-server NAO detectado (OmniQI precisa instalar o seu)"
+    echo "       pip install mem0ai"
+fi
+
+# L3: state.db
+echo
+echo "  [L3] state.db:"
+state_db="$HERMES_HOME/state.db"
+if [ -f "$state_db" ]; then
+    size=$(stat -c%s "$state_db" 2>/dev/null || stat -f%z "$state_db")
+    echo "    OK state.db: ${size}B"
+else
+    echo "    -- state.db nao existe (Hermes-Agent cria automaticamente)"
+fi
+
+# L4: skills
+echo
+echo "  [L4] Skills:"
+if [ -d "$HERMES_HOME/skills" ]; then
+    count=$(find "$HERMES_HOME/skills" -maxdepth 2 -name "SKILL.md" 2>/dev/null | wc -l)
+    echo "    OK skills count: $count"
+else
+    echo "    -- skills/ nao existe"
+fi
+
+# L7: Hooks WIRE (verifica formato)
+echo
+echo "  [L7] Hooks (formato Hermes oficial):"
+if [ -d "$HERMES_HOME/hooks" ]; then
+    for h in "$HERMES_HOME/hooks"/*/; do
+        name=$(basename "$h")
+        if [ -f "$h/HOOK.yaml" ] && [ -f "$h/handler.py" ]; then
+            events=$(grep -A3 "events:" "$h/HOOK.yaml" | grep "  -" | wc -l)
+            echo "    OK $name ($events eventos)"
+        else
+            echo "    -- $name (incompleto)"
+        fi
+    done
+else
+    echo "    -- hooks/ nao existe"
+fi
+
+# Kanban
+echo
+echo "  [Kanban]:"
+if command -v hermes >/dev/null 2>&1; then
+    if hermes kanban list >/dev/null 2>&1; then
+        cards=$(hermes kanban list 2>/dev/null | grep -E "✓|▶" | wc -l)
+        echo "    OK kanban ativo ($cards cards)"
+    else
+        echo "    -- kanban NAO inicializado (OmniQI: hermes kanban init)"
+    fi
+else
+    echo "    -- hermes CLI nao instalado (pip install hermes-agent)"
+fi
+
+# Checkpoint
+echo
+echo "  [Checkpoint]:"
+if [ -d "$HERMES_HOME/checkpoints" ]; then
+    size=$(du -sh "$HERMES_HOME/checkpoints" 2>/dev/null | cut -f1)
+    echo "    OK checkpoints/ existe ($size)"
+else
+    echo "    -- checkpoints/ nao existe (criado automaticamente ao usar write_file/patch)"
+fi
+
+echo
+echo "  ============================================"
+echo
+echo "  Se algum '--' aparece, OmniQI precisa customizar:"
+echo "    - L1 (MEMORY/USER/SOUL/AGENTS): OmniQI cria os DELE"
+echo "    - L2 (mem0): pip install mem0ai"
+echo "    - L3 (state.db): Hermes-Agent cria auto"
+echo "    - L4 (skills): OK se count > 8"
+echo "    - L7 (hooks): handler.py customizar com logica"
+echo "    - Kanban: hermes kanban init"
+echo "    - Checkpoint: auto via write_file"
+echo
+
 # 11. CHECKLIST FINAL pro OmniQI
 log "[11/11] CHECKLIST (fazer manualmente DEPOIS):"
 log ""
