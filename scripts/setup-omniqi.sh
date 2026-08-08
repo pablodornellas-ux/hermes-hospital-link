@@ -5,6 +5,18 @@
 #
 # Uso: bash <(curl -fsSL https://raw.githubusercontent.com/pablodornellas-ux/hermes-hospital-link/main/scripts/setup-omniqi.sh)
 #
+# ⚠️ DEPRECATED (08-08-2026): Este script foi SUBSTITUIDO por setup-omniqi-diagnostic.sh
+# O novo script:
+#   - Auto-detecta OS (Windows/Linux/Mac)
+#   - NAO tem boundary leak (sem refs a Pablo/Dudy/Abraao)
+#   - 1 comando so (nao precisa rodar setup-omniqi-credentials.sh depois)
+#   - .env VAZIO (OmniQI preenche)
+#   - openclaw.json GENERICO
+#
+# USO NOVO: bash <(curl -fsSL https://raw.githubusercontent.com/pablodornellas-ux/hermes-hospital-link/main/scripts/setup-omniqi-diagnostic.sh)
+#
+# Mantido pra retro-compatibilidade (OmniQI ja rodou este).
+#
 # Faz:
 # 1. Diagnóstico inicial (verifica mem0, Python, deps)
 # 2. Baixa Hospital link (auto-cura)
