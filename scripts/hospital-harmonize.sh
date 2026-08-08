@@ -38,10 +38,20 @@ fi
 echo "✅ Scripts baixados"
 echo
 
-# 2. Detectar Python
-PYTHON=$(command -v python3 || command -v python)
+# 2. Detectar Python (Windows-first pra evitar alias Microsoft Store)
+PYTHON=""
+for p in python python3 py; do
+    if command -v "$p" >/dev/null 2>&1; then
+        # Testa se funciona (no Windows, python3 = Microsoft Store stub)
+        if "$p" -c "print('ok')" >/dev/null 2>&1; then
+            PYTHON=$(command -v "$p")
+            break
+        fi
+    fi
+done
 if [ -z "$PYTHON" ]; then
-    echo "❌ Python não encontrado (instale Python 3.10+)"
+    echo "❌ Python funcional não encontrado"
+    echo "   Instale Python 3.10+ ou ative PATH"
     exit 1
 fi
 
