@@ -318,21 +318,35 @@ echo
 # L1: Identity files
 echo "  [L1] Identity files:"
 for f in MEMORY.md USER.md SOUL.md AGENTS.md; do
-    if [ -f "$HERMES_HOME/$f" ]; then
-        size=$(stat -c%s "$HERMES_HOME/$f" 2>/dev/null || stat -f%z "$HERMES_HOME/$f")
-        echo "    OK $f: ${size}B"
+    # Procurar na raiz E em memories/ (subdir comum)
+    found_path=""
+    for p in "$HERMES_HOME/$f" "$HERMES_HOME/memories/$f" "$HERMES_HOME/workspace/$f"; do
+        if [ -f "$p" ]; then
+            found_path="$p"
+            break
+        fi
+    done
+    if [ -n "$found_path" ]; then
+        size=$(stat -c%s "$found_path" 2>/dev/null || stat -f%z "$found_path")
+        echo "    OK $f: ${size}B ($found_path)"
     else
         echo "    -- $f (nao existe — OmniQI nao tem, NAO criar)"
     fi
 done
 
-# L2: mem0 (checar local, nao assumir)
+# L2: mem0 (checar LOCAL padrao mesmo se MEM0_URL vazio)
 echo
 echo "  [L2] Mem0:"
-if curl -s -m 3 "$MEM0_URL/health" >/dev/null 2>&1; then
-    echo "    OK mem0-server rodando em $MEM0_URL"
-else
-    echo "    -- mem0-server NAO detectado (OmniQI precisa instalar o seu)"
+mem0_found=0
+for url in "${MEM0_URL:-}" "http://localhost:8765" "http://127.0.0.1:8765"; do
+    if [ -n "$url" ] && curl -s -m 3 "$url/health" >/dev/null 2>&1; then
+        echo "    OK mem0-server rodando em $url"
+        mem0_found=1
+        break
+    fi
+done
+if [ "$mem0_found" -eq 0 ]; then
+    echo "    -- mem0-server NAO detectado (OmniQI precisa instalar o dele)"
     echo "       pip install mem0ai"
 fi
 
@@ -347,11 +361,11 @@ else
     echo "    -- state.db nao existe (Hermes-Agent cria automaticamente)"
 fi
 
-# L4: skills
+# L4: skills (busca recursiva)
 echo
 echo "  [L4] Skills:"
 if [ -d "$HERMES_HOME/skills" ]; then
-    count=$(find "$HERMES_HOME/skills" -maxdepth 2 -name "SKILL.md" 2>/dev/null | wc -l)
+    count=$(find "$HERMES_HOME/skills" -name "SKILL.md" -not -path "*__pycache__*" 2>/dev/null | wc -l)
     echo "    OK skills count: $count"
 else
     echo "    -- skills/ nao existe"
