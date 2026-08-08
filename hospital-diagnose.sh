@@ -100,16 +100,18 @@ if [ "$LAYER" = "all" ] || [ "$LAYER" = "base" ]; then
     echo "📋 CAMADA 1 — BASE (todos os agentes)"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-    # Tentar baixar checks individuais; se não existir, ainda roda diagnóstico local
-    if dl "00-install"; then bash 00-install.sh; fi
-    if [ $QUICK_MODE -eq 0 ] && dl "01-memory"; then bash 01-memory.sh; fi
-    if [ $QUICK_MODE -eq 0 ] && dl "02-skills"; then bash 02-skills.sh; fi
-    if [ $QUICK_MODE -eq 0 ] && dl "03-tools"; then bash 03-tools.sh; fi
-    if [ $QUICK_MODE -eq 0 ] && dl "04-hooks"; then bash 04-hooks.sh; fi
-    if [ $QUICK_MODE -eq 0 ] && dl "05-routines"; then bash 05-routines.sh; fi
-    if [ $QUICK_MODE -eq 0 ] && dl "06-security"; then bash 06-security.sh; fi
-    if dl "07-health"; then bash 07-health.sh; fi
-
+    # Roda identity check primeiro (auto-detecta tipo do agente)
+    if dl "01-identity"; then
+        bash 01-identity.sh
+        DETECTED_IDENTITY=$(cat /tmp/hospital-identity.txt 2>/dev/null | tr -d '\n')
+        echo
+        echo "🔍 Identity detectada: $DETECTED_IDENTITY"
+        # Se LAYER=all e identity detectada, ajusta pra camada especifica
+        if [ "$LAYER" = "all" ] && [ -n "$DETECTED_IDENTITY" ] && [ "$DETECTED_IDENTITY" != "unknown" ]; then
+            echo "   (rodando camada especifica de '$DETECTED_IDENTITY' tbm)"
+            LAYER="$DETECTED_IDENTITY"
+        fi
+    fi
     echo
 fi
 
