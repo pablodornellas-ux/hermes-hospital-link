@@ -26,9 +26,11 @@ echo
 
 # 1. Baixar scripts
 echo "[1] Baixando scripts de manutenção..."
-mkdir -p scripts
+mkdir -p scripts hooks/session-end
 curl -fsSL "https://raw.githubusercontent.com/$REPO/$BRANCH/scripts/harmonize_memory.py" -o scripts/harmonize_memory.py
 curl -fsSL "https://raw.githubusercontent.com/$REPO/$BRANCH/scripts/state-db-vacuum.py" -o scripts/state-db-vacuum.py
+curl -fsSL "https://raw.githubusercontent.com/$REPO/$BRANCH/scripts/session-snapshot.py" -o scripts/session-snapshot.py
+curl -fsSL "https://raw.githubusercontent.com/$REPO/$BRANCH/hooks/session-end/session-snapshot.py" -o hooks/session-end/session-snapshot.py
 
 if [ ! -f scripts/harmonize_memory.py ]; then
     echo "❌ Falha ao baixar scripts"
