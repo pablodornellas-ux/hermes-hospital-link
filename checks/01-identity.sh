@@ -94,6 +94,13 @@ for f in MEMORY.md USER.md; do
     fi
 done
 
+# L2 Provider (mem0, MemMachine, Qdrant)
+if grep -qE "mem0|memmachine|qdrant" "$HERMES_HOME/config.yaml" 2>/dev/null; then
+    ok "01-memory: L2 provider configurado (mem0/memmachine/qdrant)"
+else
+    warn "01-memory: L2 provider NAO configurado (considerar MemMachine/Mem0)"
+fi
+
 # state.db
 if [ -f "$HERMES_HOME/state.db" ]; then
     DB_SIZE_MB=$(( $(stat -c%s "$HERMES_HOME/state.db" 2>/dev/null || stat -f%z "$HERMES_HOME/state.db") / 1024 / 1024 ))
