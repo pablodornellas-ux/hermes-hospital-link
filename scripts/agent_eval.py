@@ -33,7 +33,7 @@ class EvalResult:
         return asdict(self)
 
 
-def check_factual(output: str) -> tuple[int, list[str]]:
+def check_factual(output: str, agent: str = 'abraao') -> tuple[int, list[str]]:
     """Checa se output tem factuais: placeholders, URLs invalidas, datas imposssiveis."""
     issues = []
     score = 100
@@ -153,7 +153,7 @@ def check_style(output: str) -> tuple[int, list[str]]:
 
 def eval_output(output: str, expected: str = None, agent: str = 'abraao') -> EvalResult:
     """Scora output em 3 dimensoes + salva em state.db."""
-    factual_score, factual_issues = check_factual(output)
+    factual_score, factual_issues = check_factual(output, agent)
     completeness_score, completeness_issues = check_completeness(output, expected)
     style_score, style_issues = check_style(output)
 
