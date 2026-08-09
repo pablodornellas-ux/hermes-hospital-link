@@ -7,9 +7,9 @@
 
 set -euo pipefail
 
-# Detecta HERMES_HOME
-if [ -n "$HERMES_HOME" ]; then
-    HOME_DIR="$HERMES_HOME"
+# Detecta HERMES_HOME (CLAUDE AUDIT round 3: ${VAR:-} nao quebra com set -u)
+if [ -n "${HERMES_HOME:-}" ] && [ -d "${HERMES_HOME:-}" ]; then
+    HOME_DIR="${HERMES_HOME:-}"
 elif [ -d "$HOME/AppData/Local/hermes" ]; then
     HOME_DIR="$HOME/AppData/Local/hermes"
 elif [ -d "$HOME/.hermes" ]; then
@@ -34,7 +34,7 @@ else
 fi
 
 # 2. mem0-server alive (localhost:8765)
-if curl -s -m 3 http://localhost:8765/health 2>/dev/null | grep -q "ok"; then
+if curl -s -m 3 http://localhost:8765/health 2>/dev/null | grep -q '"status".*"ok"'; then
     log_ok "mem0-server :8765 alive"
 else
     log_warn "mem0-server :8765 offline"
@@ -115,11 +115,14 @@ if [ -f "$CRON_FILE" ]; then
     fi
 fi
 
-# RESUMO
+# RESUMO (CLAUDE AUDIT round 3: score clamp >= 0)
+TOTAL_CHECKS=8
+SCORE=$(( TOTAL_CHECKS - CRIT_COUNT - WARN_COUNT / 2 ))
+[ "$SCORE" -lt 0 ] && SCORE=0
 echo ""
 echo "=============================================="
-echo "  WATCHDOG SCORE: $((8 - CRIT_COUNT - WARN_COUNT/2))/$((8))"
-echo "  CRIT: $CRIT_COUNT  WARN: $WARN_COUNT  OK: $((8 - CRIT_COUNT - WARN_COUNT))"
+echo "  WATCHDOG SCORE: $SCORE/$TOTAL_CHECKS"
+echo "  CRIT: $CRIT_COUNT  WARN: $WARN_COUNT  OK: $(( TOTAL_CHECKS - CRIT_COUNT - WARN_COUNT ))"
 echo "=============================================="
 
 if [ "$CRIT_COUNT" -gt 0 ]; then
