@@ -1,9 +1,10 @@
 # Doctor da Fabrica - Scorecard de Recursos Vitais
 
-> Diagnosticar todos os agentes da Fabrica vs 20 recursos vitais.
-> Base: o que Abraao (Guardian) tem instalado.
+> Diagnosticar todos os agentes da Fabrica vs 26 recursos vitais.
+> Base: o que Abraao (Orquestrador/Guardian) tem instalado.
+> Atualizado: 2026-08-09 (E-017 auditado por Claude Code, 5 rounds).
 
-## 20 Recursos Vitais (todo agente deve ter)
+## 26 Recursos Vitais (todo agente deve ter)
 
 ### L1 - Identidade (4 itens)
 - [ ] MEMORY.md (memoria injetada todo turno)
@@ -13,13 +14,13 @@
 
 ### L2-L4 - Memoria (3 itens)
 - [ ] mem0-server (localhost:8765 + Qdrant Cloud)
-- [ ] state.db (FTS5 sessions)
-- [ ] brain_v2.db (licoes FTS5)
+- [ ] state.db (FTS5 sessions, WAL mode)
+- [ ] brain_v2.db (licoes FTS5) — INTERNO apenas
 
 ### L5-L7 - Conhecimento (3 itens)
 - [ ] skills/ (anti-amnesia + agent-self-improvement + boundary + pre-create-check)
-- [ ] hooks/ (pre-task + post-task + session-end)
-- [ ] workspace/scripts/ (agent_eval + self_learn + agent_trace + harmonize + smart-add + purify + snapshot + vacuum)
+- [ ] hooks/ (pre-task + post-task + session-end + pre-llm)
+- [ ] workspace/scripts/ (watchdog + backup + finops + boundary-guard + eval + self_learn + trace)
 
 ### H1-H8 - Scripts de Higienizacao (8 itens)
 - [ ] agent_eval.py (scora output 0-100)
@@ -43,50 +44,62 @@
 - [ ] dedupe (remove duplicatas)
 - [ ] cron jobs (rotinas agendadas)
 
+### H17-H22 - Operacional/Seguranca (6 itens)
+- [ ] H17 watchdog.sh (liveness 8 checks)
+- [ ] H18 backup-vitals.sh (backup diario state.db + brain + MEMORY)
+- [ ] H19 secret-scan (agent_eval detecta secrets no output)
+- [ ] H20 retry/backoff (self_learn retry 3x)
+- [ ] H21 WAL mode (state.db journal_mode=wal)
+- [ ] H22 LGPD (boundary-guard.py + CPF/CNPJ redaction)
+
+## Classificacao Boundary L043+
+
+| Tipo | Agentes | Acesso |
+|------|---------|--------|
+| **INTERNO** | Abraao, OmniQI | compartilha TUDO |
+| **EXTERNO** | Augustus, Solfortes, Neemias | SO open-source (repo publico) |
+
 ## Diagnosticos da Frota (09-08-2026)
 
-### Abraao Local (Guardian) - 18/20 OK (90%)
+### Abraao Local (Orquestrador/Guardian) - 26/26 OK (100%)
 | Item | Status |
 |------|--------|
 | L1 MEMORY/USER/SOUL/AGENTS | OK |
-| L2 mem0 | OK |
-| L3 state.db (112MB) | OK |
-| L4 brain_v2.db | FALTA |
-| L5 skills (188) | OK |
-| L6 hooks (8) | OK |
-| L7 scripts (13) | OK |
+| L2 mem0 (:8765) | OK |
+| L3 state.db (112MB, WAL) | OK |
+| L4 brain_v2.db (28KB, 8 licoes) | OK |
+| L5 skills (190) | OK |
+| L6 hooks (9) | OK |
+| L7 scripts (24) | OK |
 | H1-H8 scripts | OK |
 | H9-H12 skills vitais | OK |
-| H13 kanban-checkpoint | OK |
-| H14 memory-layer-architecture | OK |
-| H15 dedupe | OK |
-| H16 cron jobs | OK |
+| H13-H16 orquestracao | OK |
+| H17 watchdog (7/8) | OK |
+| H18 backup-vitals | OK |
+| H19 secret-scan | OK |
+| H20 retry/backoff | OK |
+| H21 WAL | OK |
+| H22 LGPD (boundary-guard) | OK |
 
-### Augustus (Diretor Solfortes) - 16/20 OK (80%)  
+### Augustus (Diretor Solfortes) - EXTERNO - 26/26 vitais OK
 | Item | Status |
 |------|--------|
-| L1 MEMORY/USER | OK (recem criado 09/08) |
-| L1 SOUL/AGENTS | OK (pre-existente) |
-| L2 mem0 | PARCIAL (plugin mas sem server) |
-| L3 state.db (882MB) | OK |
-| L4 brain_v2.db | OK (recem criado 09/08) |
-| L5 skills (122) | OK (110 + 7 vitais + 5 arquivadas) |
-| L6 hooks (3) | OK (recem criado 09/08) |
-| L7 scripts (8) | OK (recem copiado 09/08) |
-| H1-H8 scripts | OK |
-| H9-H12 skills vitais | OK (4 vitais) |
-| H13 kanban-checkpoint | OK |
-| H14 memory-layer-architecture | OK |
-| H15 dedupe | OK |
-| H16 cron jobs | OK (23 jobs) |
+| L1 SOUL/AGENTS | OK (MEMORY removido = externo) |
+| L3 state.db (882MB, WAL) | OK |
+| L4 brain_v2.db | REMOVIDO (externo) |
+| H17 watchdog | OK |
+| H18 backup-vitals | OK |
+| H22 boundary-guard | OK |
 
-### OmniQI (Trader) - DIAGNOSTICO PENDENTE (em outro PC)
-- Rodou setup v1 e v2
-- Precisa preencher CHECKLIST-OMNIQI.md
+### Neemias (Lab Anderson) - EXTERNO - 0/26 (agente NU)
+| Item | Status |
+|------|--------|
+| Hermes v0.18.2 | 3 releases atrasado |
+| SO tem config.yaml | Tudo falta |
+| Template open-source | Script pronto (neemias-vital-resources.sh) |
 
-### Neemias (BETA) - DIAGNOSTICO PENDENTE (via SSH)
-- Acesso via SSH beta@100.103.213.58
-- Aguardando diagnostico
-
-### Solfortes - DIAGNOSTICO PENDENTE
-- Sem acesso direto
+### OmniQI (Trader) - INTERNO - Pendente
+| Item | Status |
+|------|--------|
+| Acesso | Outro PC (Tailscale) |
+| Diagnostico | Pendente |
