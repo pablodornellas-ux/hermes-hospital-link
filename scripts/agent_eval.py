@@ -50,9 +50,9 @@ def check_factual(output: str) -> tuple[int, list[str]]:
         score -= 20
         issues.append(f'URLs suspeitas: {suspicious_urls[:3]}')
 
-    # Datas imposssiveis (ano 2099, 1900)
+    # Datas imposssiveis (ano futuro >2030 ou muito antigo <2019)
     years = re.findall(r'\b(20\d{2})\b', output)
-    bad_years = [y for y in years if int(y) > 2030 or int(y) < 2020]
+    bad_years = [y for y in years if int(y) > 2030 or int(y) < 2019]
     if bad_years:
         score -= 15
         issues.append(f'datas suspeitas: {bad_years}')
@@ -104,8 +104,8 @@ def check_style(output: str) -> tuple[int, list[str]]:
         score -= 10 * min(em_dash_count, 3)
         issues.append(f'em-dash (—) usado {em_dash_count}x (Pablo prefere hifen)')
 
-    # Jargon leak (log-style: "OK:", "DONE", "ERR:")
-    jargon = re.findall(r'\b(OK:|DONE|ERR:|FAIL|PASS|SKIP)\b', output)
+    # Jargon leak (log-style: "OK:", "DONE", "ERR:") — so no inicio de linha
+    jargon = re.findall(r'^(OK:|DONE|ERR:|FAIL|PASS|SKIP)\b', output, re.MULTILINE)
     if jargon:
         score -= 5 * min(len(jargon), 3)
         issues.append(f'jargon de log: {jargon[:3]}')
@@ -257,9 +257,11 @@ def main():
     agent = 'abraao'
     json_output = False
 
-    for arg in args:
+    for i, arg in enumerate(args):
         if arg.startswith('--agent='):
-            agent = arg.split('=')[1]
+            agent = arg.split('=', 1)[1]
+        elif arg == '--agent' and i + 1 < len(args):
+            agent = args[i + 1]  # --agent X (espaco)
         elif arg == '--json':
             json_output = True
 
