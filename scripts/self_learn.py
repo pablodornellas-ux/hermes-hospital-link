@@ -184,19 +184,7 @@ def identify_rules(added: list, removed: list, generated: str, approved: str):
             'confidence': 0.75
         })
 
-    # 10. Tom/ordem (Pablo reorganizou) — CLAUDE AUDIT
-    # Se poucas linhas mudaram mas a ordem e diferente (added e removed tem mesmas palavras)
-    if len(added) >= 3 and len(removed) >= 3:
-        added_words = set(all_added_text.lower().split())
-        removed_words = set(all_removed_text.lower().split())
-        if added_words == removed_words and len(added_words) > 10:
-            insights.append({
-                'type': 'style',
-                'rule': 'Reorganizar ordem das informacoes — Pablo prefere outra sequencia',
-                'action': 'add_to_skill',
-                'evidence': 'Pablo reordenou linhas sem mudar conteudo',
-                'confidence': 0.6
-            })
+    # nota: insight de reorganizacao de tom/ordem removido (conf 0.6 < gate 0.7 = codigo morto, Claude audit round 2)
 
     # GATE DE CONFIANCA (CLAUDE AUDIT): so salva insights com confidence >= 0.7
     insights = [i for i in insights if i.get('confidence', 0) >= 0.7]
@@ -205,7 +193,8 @@ def identify_rules(added: list, removed: list, generated: str, approved: str):
 
 
 def save_to_mem0(insight: dict, agent: str):
-    """Salva insight no mem0 (vetorizada, Qdrant Cloud)."""
+    """Salva insight no mem0 (vetorizada, Qdrant Cloud). CLAUDE AUDIT: retry + backoff."""
+    import time as _time
     content = f"[self-learn {insight['type']}] {insight['rule']}"
     payload = json.dumps({
         'agent': f'{agent}-self-learn',
@@ -219,18 +208,23 @@ def save_to_mem0(insight: dict, agent: str):
         }
     }).encode()
 
-    try:
-        req = urllib.request.Request(
-            f'{MEM0_URL}/memory/add',
-            data=payload,
-            headers={'Content-Type': 'application/json'},
-            method='POST'
-        )
-        urllib.request.urlopen(req, timeout=5)
-        return True
-    except Exception as e:
-        print(f'WARN: mem0 falhou ({e}) — tentando brain_v2.db fallback', file=sys.stderr)
-        return False
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            req = urllib.request.Request(
+                f'{MEM0_URL}/memory/add',
+                data=payload,
+                headers={'Content-Type': 'application/json'},
+                method='POST'
+            )
+            urllib.request.urlopen(req, timeout=5)
+            return True
+        except Exception as e:
+            if attempt < max_retries - 1:
+                _time.sleep(2 ** attempt)  # backoff: 1s, 2s, 4s
+                continue
+            print(f'WARN: mem0 falhou apos {max_retries} tentativas ({e}) — brain_v2.db fallback', file=sys.stderr)
+            return False
 
 
 def update_memory_md(insights: list, agent: str):
