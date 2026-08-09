@@ -38,10 +38,34 @@ def check_factual(output: str) -> tuple[int, list[str]]:
     issues = []
     score = 100
 
-    # Placeholders
+    # 1. Placeholders
     if '[REDACTED]' in output or 'TODO' in output or '<placeholder>' in output:
         score -= 30
         issues.append('output contem placeholder ([REDACTED]/TODO)')
+
+    # 1b. SECRET SCAN (CLAUDE AUDIT round 2): varre segredos antes de sair
+    # Padroes: API keys (sk-...), bearer tokens, passwords, private keys
+    secret_patterns = [
+        (r'sk-[a-zA-Z0-9]{20,}', 'API key exposta (sk-...)'),
+        (r'Bearer\s+[a-zA-Z0-9_.\-]{20,}', 'Bearer token exposto'),
+        (r'(?i)password\s*[:=]\s*\S{8,}', 'password em texto plano'),
+        (r'-----BEGIN\s+(RSA|EC|OPENSSH|PGP)?\s?PRIVATE\s+KEY-----', 'private key exposta'),
+        (r'(?i)(api_?key|secret|token)\s*[:=]\s*[a-zA-Z0-9_\-]{32,}', 'secret em texto plano'),
+    ]
+    for pattern, label in secret_patterns:
+        matches = re.findall(pattern, output)
+        if matches:
+            score = 0  # CRITICO: segredo exposto = score zero
+            issues.append(f'SECRET LEAK: {label} ({len(matches)}x)')
+            break  # um ja e critico, nao precisa continuar
+
+    # 1c. LGPD: CPF, email corporativo, telefone BR
+    if re.search(r'\b\d{3}\.\d{3}\.\d{3}-\d{2}\b', output):
+        score -= 40
+        issues.append('CPF exposto (LGPD)')
+    if re.search(r'\b[\w.-]+@(gmail|outlook|hotmail|yahoo)\.com\b', output) and agent != 'pablo':
+        score -= 15
+        issues.append('email pessoal em output')
 
     # URLs inventadas (http://example.com, https://foo.bar)
     urls = re.findall(r'https?://[^\s\)]+', output)
