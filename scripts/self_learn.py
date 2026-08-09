@@ -75,6 +75,8 @@ def identify_rules(added: list, removed: list, generated: str, approved: str):
     """Heuristicas (estilo Sylph) pra identificar regras novas nas edicoes."""
     insights = []
     all_changes = ' '.join(added + removed)
+    all_removed_text = ' '.join(removed)
+    all_added_text = ' '.join(added)
 
     # 1. Em-dash removido (Pablo prefere hifen)
     em_dash_removed = sum(1 for l in removed if '\u2014' in l)
@@ -152,6 +154,52 @@ def identify_rules(added: list, removed: list, generated: str, approved: str):
                 'evidence': f'output original {len(generated)}B → approved {len(approved)}B',
                 'confidence': 0.8
             })
+
+    # 8. Fato trocado (numero/nome corrigido) — CLAUDE AUDIT
+    # Detecta numeros ou nomes proprios que mudaram de approved → generated
+    import re as _re
+    nums_removed = set(_re.findall(r'\b\d{2,}\b', all_removed_text))
+    nums_added = set(_re.findall(r'\b\d{2,}\b', all_added_text))
+    nums_changed = nums_added - nums_removed  # numeros novos que nao estavam no original
+    if len(nums_changed) >= 2:
+        insights.append({
+            'type': 'factual',
+            'rule': 'Verificar numeros/dados antes de escrever — Pablo corrigiu fatos',
+            'action': 'add_to_memory',
+            'evidence': f'{len(nums_changed)} numeros corrigidos: {list(nums_changed)[:5]}',
+            'confidence': 0.85
+        })
+
+    # 9. Remocao de alucinacao (texto removido sem substituicao) — CLAUDE AUDIT
+    # Se linhas foram removidas sem equivalente em added, pode ser alucinacao cortada
+    removed_only = [l.strip() for l in removed if l.strip() and len(l.strip()) > 30]
+    added_text_lower = all_added_text.lower()
+    unvalidated_removals = [l for l in removed_only if l[:20].lower() not in added_text_lower]
+    if len(unvalidated_removals) >= 2:
+        insights.append({
+            'type': 'factual',
+            'rule': 'Cuidado com alucinacoes — Pablo cortou conteudo nao fundado',
+            'action': 'add_to_memory',
+            'evidence': f'{len(unvalidated_removals)} linhas removidas sem substituicao',
+            'confidence': 0.75
+        })
+
+    # 10. Tom/ordem (Pablo reorganizou) — CLAUDE AUDIT
+    # Se poucas linhas mudaram mas a ordem e diferente (added e removed tem mesmas palavras)
+    if len(added) >= 3 and len(removed) >= 3:
+        added_words = set(all_added_text.lower().split())
+        removed_words = set(all_removed_text.lower().split())
+        if added_words == removed_words and len(added_words) > 10:
+            insights.append({
+                'type': 'style',
+                'rule': 'Reorganizar ordem das informacoes — Pablo prefere outra sequencia',
+                'action': 'add_to_skill',
+                'evidence': 'Pablo reordenou linhas sem mudar conteudo',
+                'confidence': 0.6
+            })
+
+    # GATE DE CONFIANCA (CLAUDE AUDIT): so salva insights com confidence >= 0.7
+    insights = [i for i in insights if i.get('confidence', 0) >= 0.7]
 
     return insights
 
