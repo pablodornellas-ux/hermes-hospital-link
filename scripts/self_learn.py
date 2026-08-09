@@ -221,7 +221,7 @@ def save_to_mem0(insight: dict, agent: str):
             return True
         except Exception as e:
             if attempt < max_retries - 1:
-                _time.sleep(2 ** attempt)  # backoff: 1s, 2s, 4s
+                _time.sleep(2 ** attempt)  # backoff: 1s, 2s (3a tentativa nao dorme)
                 continue
             print(f'WARN: mem0 falhou apos {max_retries} tentativas ({e}) — brain_v2.db fallback', file=sys.stderr)
             return False
