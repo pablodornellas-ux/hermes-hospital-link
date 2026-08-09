@@ -6,7 +6,20 @@
 
 set -euo pipefail
 
-KEEP_DAYS="${1:-7}"
+# CLAUDE AUDIT round 3: parse --keep N ou numero direto, default 7
+KEEP_DAYS=7
+for arg in "$@"; do
+    case "$arg" in
+        --keep) shift_next=1 ;;
+        *)
+            if [ "${shift_next:-0}" = "1" ]; then
+                KEEP_DAYS="$arg"; shift_next=0
+            elif [[ "$arg" =~ ^[0-9]+$ ]]; then
+                KEEP_DAYS="$arg"
+            fi
+            ;;
+    esac
+done
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
 # Detecta HERMES_HOME
@@ -81,10 +94,10 @@ for f in MEMORY.md USER.md SOUL.md AGENTS.md; do
     fi
 done
 
-# 4. Cleanup: remover backups mais antigos que KEEP_DAYS
-if [ "$KEEP_DAYS" -gt 0 ]; then
-    DELETED=$(find "$BACKUP_DIR" -name "*_${TIMESTAMP%%_*}*.db" -mtime +$KEEP_DAYS -delete -print 2>/dev/null | wc -l)
-    DELETED_MD=$(find "$BACKUP_DIR" -name "*_${TIMESTAMP%%_*}*.md" -mtime +$KEEP_DAYS -delete -print 2>/dev/null | wc -l)
+# 4. Cleanup: remover backups mais antigos que KEEP_DAYS (CLAUDE AUDIT round 3: glob corretor)
+if [ "$KEEP_DAYS" -gt 0 ] 2>/dev/null; then
+    DELETED=$(find "$BACKUP_DIR" -name "*.db" -mtime +$KEEP_DAYS -delete -print 2>/dev/null | wc -l)
+    DELETED_MD=$(find "$BACKUP_DIR" -name "*.md" -mtime +$KEEP_DAYS -delete -print 2>/dev/null | wc -l)
     TOTAL_DELETED=$((DELETED + DELETED_MD))
     if [ "$TOTAL_DELETED" -gt 0 ]; then
         echo "[CLEAN] $TOTAL_DELETED backups antigos removidos (>${KEEP_DAYS}d)"
